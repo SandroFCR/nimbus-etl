@@ -7,6 +7,7 @@ Pipeline **ETL** (Extract → Transform → Load) en Python que consulta el clim
 - ✅ Base de datos en la nube (**Azure SQL Database**, tier Serverless) creada y funcionando.
 - ✅ Desplegado en **Azure Functions** (Python/Linux) con timer trigger corriendo solo, todos los días a las 08:00 UTC.
 - ✅ **CI/CD con GitHub Actions**: cada `git push` a `main` despliega automáticamente a la Function App, sin pasos manuales.
+- ✅ **Azure Key Vault**: la API key y el password de SQL ya no están en texto plano en la Function App — se leen desde Key Vault vía identidad administrada.
 
 ## Arquitectura
 
@@ -38,7 +39,8 @@ CLIMA ETL/
 │   ├── load.py           # Crea la tabla e inserta/actualiza en Azure SQL
 │   └── logger.py         # Logging a consola (+ archivo local fuera de Azure)
 ├── azure/
-│   └── provision.ps1     # Script para crear los recursos de Azure (CLI)
+│   ├── provision.ps1     # Script para crear los recursos de Azure (CLI)
+│   └── setup-keyvault.ps1 # Crea el Key Vault y migra los secretos ahi
 ├── requirements.txt
 ├── .env.example
 └── logs/                 # Se genera solo en ejecucion local
@@ -92,6 +94,17 @@ az functionapp deployment list-publishing-profiles --name <tu-function-app> --re
 > az resource update --resource-group rg-clima-etl --name scm --namespace Microsoft.Web --resource-type basicPublishingCredentialsPolicies --parent sites/<tu-function-app> --set properties.allow=true
 > ```
 
+## Secretos (Azure Key Vault)
+
+`OPENWEATHER_API_KEY` y `AZURE_SQL_PASSWORD` no viven como texto plano en la Function App: se guardan en **Azure Key Vault**, y la Function App los lee mediante una **identidad administrada (system-assigned)** con permiso de solo lectura sobre esos dos secretos — sin passwords adicionales de por medio. El App Setting queda como una referencia (`@Microsoft.KeyVault(SecretUri=...)`) que Azure resuelve de forma transparente antes de que el código la vea; `os.getenv("OPENWEATHER_API_KEY")` no cambia.
+
+Para provisionarlo (requiere haber corrido `provision.ps1` antes):
+```powershell
+./azure/setup-keyvault.ps1
+```
+
+> Nota para Windows: si necesitas editar manualmente un App Setting con una referencia de Key Vault (`@Microsoft.KeyVault(...)`), no lo pases directo como argumento — PowerShell/CMD rompen los paréntesis. Escríbelo en un archivo JSON (`[{"name": "...", "value": "...", "slotSetting": false}]`) y usa `--settings @archivo.json`.
+
 ## Instalación (uso local)
 
 ```bash
@@ -143,5 +156,5 @@ La tabla `clima` tiene una restricción `UNIQUE(ciudad, fecha)`. Si el ETL corre
 - `pymssql` — conexión a Azure SQL Database
 - `azure-functions` — runtime de Azure Functions (Python v2 programming model)
 - `python-dotenv` — configuración por variables de entorno (uso local)
-- Azure Functions, Azure SQL Database, Application Insights
+- Azure Functions, Azure SQL Database, Application Insights, Azure Key Vault
 - GitHub Actions — CI/CD (deploy automático a cada push a `main`)
