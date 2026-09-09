@@ -4,9 +4,9 @@ Pipeline **ETL** (Extract → Transform → Load) en Python que consulta el clim
 
 ## Estado del proyecto
 
-- ✅ Base de datos en la nube (**Azure SQL Database**, tier Serverless) creada y funcionando — `main.py` corriendo en local ya escribe y actualiza datos ahí en vez de en un archivo local.
-- ✅ Infraestructura de Azure Functions provisionada (Resource Group, Storage Account, Function App en Python/Linux, Application Insights).
-- ⏳ Pendiente: publicar el código en la Function App (`func azure functionapp publish`) para que el timer trigger corra solo, sin depender de ejecutar `main.py` a mano.
+- ✅ Base de datos en la nube (**Azure SQL Database**, tier Serverless) creada y funcionando.
+- ✅ Desplegado en **Azure Functions** (Python/Linux) con timer trigger corriendo solo, todos los días a las 08:00 UTC.
+- ✅ **CI/CD con GitHub Actions**: cada `git push` a `main` despliega automáticamente a la Function App, sin pasos manuales.
 
 ## Arquitectura
 
@@ -72,12 +72,25 @@ CLIMA ETL/
    ```powershell
    ./azure/provision.ps1
    ```
-3. Desplegar el código:
+3. Primer despliegue manual (solo la primera vez, para verificar que todo conecta bien):
    ```powershell
    func azure functionapp publish <nombre-de-tu-function-app>
    ```
 
 El timer trigger (`function_app.py`) corre por defecto todos los días a las 08:00 UTC — se ajusta cambiando el `schedule` (formato NCRONTAB) del decorador `@app.timer_trigger`.
+
+## CI/CD
+
+El workflow [.github/workflows/deploy.yml](.github/workflows/deploy.yml) despliega automáticamente a la Function App en cada `git push` a `main` (o manualmente desde la pestaña *Actions* de GitHub). Requiere un secreto de repositorio `AZURE_FUNCTIONAPP_PUBLISH_PROFILE` con el publish profile de la Function App:
+
+```powershell
+az functionapp deployment list-publishing-profiles --name <tu-function-app> --resource-group rg-clima-etl --xml | gh secret set AZURE_FUNCTIONAPP_PUBLISH_PROFILE
+```
+
+> Nota: Azure deshabilita por defecto la autenticación básica SCM en Function Apps nuevas. Si el deploy falla con `401 Unauthorized`, habilítala con:
+> ```powershell
+> az resource update --resource-group rg-clima-etl --name scm --namespace Microsoft.Web --resource-type basicPublishingCredentialsPolicies --parent sites/<tu-function-app> --set properties.allow=true
+> ```
 
 ## Instalación (uso local)
 
@@ -131,3 +144,4 @@ La tabla `clima` tiene una restricción `UNIQUE(ciudad, fecha)`. Si el ETL corre
 - `azure-functions` — runtime de Azure Functions (Python v2 programming model)
 - `python-dotenv` — configuración por variables de entorno (uso local)
 - Azure Functions, Azure SQL Database, Application Insights
+- GitHub Actions — CI/CD (deploy automático a cada push a `main`)
