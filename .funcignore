@@ -1,0 +1,12 @@
+.git*
+.vscode
+.venv
+venv/
+__pycache__/
+*.pyc
+logs/
+*.db
+.env
+.env.example
+local.settings.json
+README.md

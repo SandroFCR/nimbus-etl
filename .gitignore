@@ -4,3 +4,10 @@ logs/
 __pycache__/
 *.pyc
 *.db
+
+# Azure Functions
+local.settings.json
+.python_packages/
+bin/
+obj/
+.vscode/
