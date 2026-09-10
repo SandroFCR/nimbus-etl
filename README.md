@@ -8,6 +8,7 @@ Pipeline **ETL** (Extract → Transform → Load) en Python que consulta el clim
 - ✅ Desplegado en **Azure Functions** (Python/Linux) con timer trigger corriendo solo, todos los días a las 08:00 UTC.
 - ✅ **CI/CD con GitHub Actions**: cada `git push` a `main` despliega automáticamente a la Function App, sin pasos manuales.
 - ✅ **Azure Key Vault**: la API key y el password de SQL ya no están en texto plano en la Function App — se leen desde Key Vault vía identidad administrada.
+- ✅ **Tests unitarios (pytest)**: `model`, `transform` y `load` cubiertos, corren automáticamente en CI y bloquean el despliegue si algo falla.
 
 ## Arquitectura
 
@@ -41,7 +42,13 @@ CLIMA ETL/
 ├── azure/
 │   ├── provision.ps1     # Script para crear los recursos de Azure (CLI)
 │   └── setup-keyvault.ps1 # Crea el Key Vault y migra los secretos ahi
+├── tests/
+│   ├── test_model.py     # Validaciones de WeatherRecord (Pydantic)
+│   ├── test_transform.py # Mapeo y conversion de datos crudos de la API
+│   └── test_load.py      # Logica de load.py con Azure SQL mockeado
+├── pytest.ini
 ├── requirements.txt
+├── requirements-dev.txt  # requirements.txt + pytest
 ├── .env.example
 └── logs/                 # Se genera solo en ejecucion local
 ```
@@ -93,6 +100,17 @@ az functionapp deployment list-publishing-profiles --name <tu-function-app> --re
 > ```powershell
 > az resource update --resource-group rg-clima-etl --name scm --namespace Microsoft.Web --resource-type basicPublishingCredentialsPolicies --parent sites/<tu-function-app> --set properties.allow=true
 > ```
+
+El workflow corre en dos jobs: `test` (instala `requirements-dev.txt` y corre `pytest`) y `build-and-deploy`, que depende del primero (`needs: test`) — si un test falla, no se despliega nada a Azure.
+
+## Tests
+
+```bash
+pip install -r requirements-dev.txt
+pytest -v
+```
+
+Cubre `model.py` (reglas de validación de Pydantic), `transform.py` (mapeo del JSON crudo de la API) y `load.py` (lógica de conexión/upsert contra Azure SQL, con `pymssql` mockeado — no necesita credenciales reales ni conexión a internet para correr).
 
 ## Secretos (Azure Key Vault)
 
@@ -155,6 +173,7 @@ La tabla `clima` tiene una restricción `UNIQUE(ciudad, fecha)`. Si el ETL corre
 - `pydantic` — validación de datos
 - `pymssql` — conexión a Azure SQL Database
 - `azure-functions` — runtime de Azure Functions (Python v2 programming model)
+- `pytest` — tests unitarios
 - `python-dotenv` — configuración por variables de entorno (uso local)
 - Azure Functions, Azure SQL Database, Application Insights, Azure Key Vault
 - GitHub Actions — CI/CD (deploy automático a cada push a `main`)

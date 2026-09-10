@@ -4,6 +4,7 @@ logs/
 __pycache__/
 *.pyc
 *.db
+.pytest_cache/
 
 # Azure Functions
 local.settings.json
