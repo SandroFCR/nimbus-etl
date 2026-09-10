@@ -10,6 +10,7 @@ on:
       - 'azure/**'
       - 'dashboard.py'
       - 'requirements-dashboard.txt'
+      - '.streamlit/**'
   workflow_dispatch:
 
 env:
