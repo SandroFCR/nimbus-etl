@@ -6,7 +6,7 @@ import streamlit as st
 
 from etl.load import get_conn
 
-st.set_page_config(page_title="Clima ETL - Dashboard", page_icon="🌤️", layout="wide")
+st.set_page_config(page_title="Nimbus ETL - Dashboard", page_icon="🌤️", layout="wide")
 
 # ---- Tokens de diseno (superficie oscura, misma paleta validada del proyecto) ----
 PAGE_BG = "#0d0d0d"
@@ -129,7 +129,7 @@ def render_weather_card(row):
 
 # ---- Sidebar ----
 with st.sidebar:
-    st.markdown("## 🌤️ Clima ETL")
+    st.markdown("## 🌤️ Nimbus ETL")
     st.caption("Dashboard en vivo sobre Azure SQL Database.")
     if st.button("🔄 Actualizar datos", use_container_width=True):
         st.cache_data.clear()
@@ -146,7 +146,7 @@ if df.empty:
 x_range, tick_format = time_axis_range(df)
 latest = df.sort_values("fecha").groupby("ciudad").tail(1).sort_values("ciudad")
 
-st.title("Clima ETL — Dashboard")
+st.title("Nimbus ETL — Dashboard")
 
 # ---- KPIs ----
 k1, k2, k3, k4 = st.columns(4)

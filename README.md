@@ -1,4 +1,4 @@
-# 🌤️ Clima ETL
+# 🌤️ Nimbus ETL
 
 Pipeline **ETL** (Extract → Transform → Load) en Python que consulta el clima actual de varias ciudades desde la API de [OpenWeatherMap](https://openweathermap.org/api), valida los datos y los persiste en **Azure SQL Database**. Corre en la nube como **Azure Function** con ejecución programada (timer trigger), o localmente vía `main.py`.
 
@@ -74,6 +74,8 @@ CLIMA ETL/
 
 **Recursos usados:** Azure Functions (Consumption, Linux, Python) + Azure SQL Database (Serverless) + Application Insights.
 
+> Nota: los recursos ya desplegados conservan el nombre `clima-etl-*` (Function App, Resource Group, Key Vault) de cuando se provisionaron — Azure no permite renombrar recursos en vivo sin recrearlos. El proyecto se renombró a **Nimbus ETL** a nivel de repositorio/marca; la infraestructura sigue funcionando igual.
+
 1. Instalar herramientas:
    ```powershell
    winget install -e --id Microsoft.AzureCLI
@@ -146,8 +148,8 @@ Para provisionarlo (requiere haber corrido `provision.ps1` antes):
 ## Instalación (uso local)
 
 ```bash
-git clone https://github.com/SandroFCR/clima-etl.git
-cd clima-etl
+git clone https://github.com/SandroFCR/nimbus-etl.git
+cd nimbus-etl
 pip install -r requirements.txt
 ```
 
