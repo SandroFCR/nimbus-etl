@@ -9,6 +9,7 @@ Pipeline **ETL** (Extract → Transform → Load) en Python que consulta el clim
 - ✅ **CI/CD con GitHub Actions**: cada `git push` a `main` despliega automáticamente a la Function App, sin pasos manuales.
 - ✅ **Azure Key Vault**: la API key y el password de SQL ya no están en texto plano en la Function App — se leen desde Key Vault vía identidad administrada.
 - ✅ **Tests unitarios (pytest)**: `model`, `transform` y `load` cubiertos, corren automáticamente en CI y bloquean el despliegue si algo falla.
+- ✅ **Dashboard (Streamlit)**: visualiza el histórico leyendo en vivo desde Azure SQL Database.
 
 ## Arquitectura
 
@@ -32,6 +33,7 @@ Cada ciudad pasa por las 3 etapas de forma independiente: si una falla (por ejem
 CLIMA ETL/
 ├── main.py             # Orquesta el ETL manualmente (uso local/pruebas)
 ├── function_app.py      # Entry point de Azure Functions (timer trigger diario)
+├── dashboard.py          # Dashboard (Streamlit) sobre el historico en Azure SQL
 ├── host.json             # Configuracion del runtime de Azure Functions
 ├── etl/
 │   ├── extract.py       # Llama a la API de OpenWeatherMap
@@ -48,7 +50,8 @@ CLIMA ETL/
 │   └── test_load.py      # Logica de load.py con Azure SQL mockeado
 ├── pytest.ini
 ├── requirements.txt
-├── requirements-dev.txt  # requirements.txt + pytest
+├── requirements-dev.txt        # requirements.txt + pytest
+├── requirements-dashboard.txt  # requirements.txt + streamlit, plotly, pandas
 ├── .env.example
 └── logs/                 # Se genera solo en ejecucion local
 ```
@@ -112,6 +115,23 @@ pytest -v
 
 Cubre `model.py` (reglas de validación de Pydantic), `transform.py` (mapeo del JSON crudo de la API) y `load.py` (lógica de conexión/upsert contra Azure SQL, con `pymssql` mockeado — no necesita credenciales reales ni conexión a internet para correr).
 
+## Dashboard
+
+Un dashboard en **Streamlit** que lee en vivo desde Azure SQL Database (usa tu `.env` local, misma conexión que `main.py`):
+
+```bash
+pip install -r requirements-dashboard.txt
+streamlit run dashboard.py
+```
+
+Incluye:
+- **Clima actual por ciudad** — tabla con el último registro de cada ciudad.
+- **Comparar temperatura entre ciudades** — gráfico de líneas con selector (hasta 8 ciudades a la vez, por legibilidad).
+- **Todas las ciudades** — grilla de mini-gráficos individuales (small multiples), sin límite de ciudades.
+- **Ver datos crudos** — tabla completa expandible.
+
+Los datos se cachean 5 minutos (`st.cache_data`) para no golpear la base en cada interacción — la primera carga puede tardar unos segundos si la base (tier Serverless) estaba en pausa por inactividad.
+
 ## Secretos (Azure Key Vault)
 
 `OPENWEATHER_API_KEY` y `AZURE_SQL_PASSWORD` no viven como texto plano en la Function App: se guardan en **Azure Key Vault**, y la Function App los lee mediante una **identidad administrada (system-assigned)** con permiso de solo lectura sobre esos dos secretos — sin passwords adicionales de por medio. El App Setting queda como una referencia (`@Microsoft.KeyVault(SecretUri=...)`) que Azure resuelve de forma transparente antes de que el código la vea; `os.getenv("OPENWEATHER_API_KEY")` no cambia.
@@ -174,6 +194,7 @@ La tabla `clima` tiene una restricción `UNIQUE(ciudad, fecha)`. Si el ETL corre
 - `pymssql` — conexión a Azure SQL Database
 - `azure-functions` — runtime de Azure Functions (Python v2 programming model)
 - `pytest` — tests unitarios
+- `streamlit`, `plotly`, `pandas` — dashboard
 - `python-dotenv` — configuración por variables de entorno (uso local)
 - Azure Functions, Azure SQL Database, Application Insights, Azure Key Vault
 - GitHub Actions — CI/CD (deploy automático a cada push a `main`)
